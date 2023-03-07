@@ -35,9 +35,8 @@ Function FindParagraphs(txt As String) As Word.paragraph
     pr1Passed = False
     topMargin = 30
     foundBool = False
-    'cmtStyleCount = 0
     For Each p In ActiveDocument.Paragraphs
-        paraFound = InStr(1, p.Range.Text, txt, vbTextCompare)
+        paraFound = InStr(1, p.Range.text, txt, vbTextCompare)
         If paraFound Then
             foundBool = True
         End If
@@ -50,7 +49,7 @@ Function FindParagraphs(txt As String) As Word.paragraph
                     Exit For
                 End If
                 If p.Style = "PR2" Or p.Style = "CMT" Then
-                    AddCheckBox p.Range.Text, topMargin
+                    AddCheckBox p.Range.text, topMargin
                     topMargin = topMargin + 25
                 End If
                 If p.Style = "ART" And p.Previous.Style = "PR2" Then
@@ -61,33 +60,13 @@ Function FindParagraphs(txt As String) As Word.paragraph
                 End If
             End If
         End If
-'        If foundBool Then
-'            If p.Previous.Style = "PR2" And p.Style = "CMT" Then
-'                Exit For
-'            End If
-'            If p.Next.Style = "PR2" Or p.Next.Style = "CMT" Then
-'                If cmtStyleCount < 2 And p.Next.Style = "CMT" Then
-'                    AddCheckBox p.Next.Range.Text, topMargin
-'                    topMargin = topMargin + 25
-'                    cmtStyleCount = cmtStyleCount + 1
-'                ElseIf cmtStyleCount < 2 Then
-'                    AddCheckBox p.Next.Range.Text, topMargin
-'                    topMargin = topMargin + 25
-'                End If
-'            Else
-'                Exit For
-'            End If
-'        End If
-'        If paraFound Then
-'            foundBool = True
-'        End If
     Next
 End Function
 Function AddCheckBox(boxName As String, topMargin As Integer)
     Dim checkBox As Object
     Set checkBox = PickSectionForm.Controls.Add("Forms.Checkbox.1", "Paragraphs", True)
     With checkBox
-        .Caption = boxName
+        .caption = boxName
         .Left = 10
         .Width = 400
         .Top = topMargin
@@ -106,20 +85,22 @@ End Function
 Sub SectionDeletion(txt As String)
 
 ' SectionDeletion Macro
-   
+
+   Debug.Print txt
    Do While True
         With Selection.Find
-             .Text = txt
-             .Wrap = wdFindContinue
-             .format = False
-             .MatchCase = False
-             .MatchWholeWord = False
-             .MatchWildcards = False
-             .MatchSoundsLike = False
-             .MatchAllWordForms = False
-         End With
-            Selection.Find.Execute
-            If Selection.Find.Found Then
+            .text = txt
+            .Wrap = wdFindContinue
+            .format = False
+            .MatchCase = False
+            .MatchWholeWord = False
+            .MatchWildcards = False
+            .MatchSoundsLike = False
+            .MatchAllWordForms = False
+        End With
+        Selection.Find.Execute
+        Debug.Print Selection
+        If Selection.Find.Found Then
             If Selection.Paragraphs(1).OutlineLevel = "2" Then
                 Do While True
                     Selection.Paragraphs(1).Range.Delete
@@ -134,3 +115,97 @@ Sub SectionDeletion(txt As String)
         Selection.Paragraphs(1).Range.Delete
     Loop
 End Sub
+Function GatherKeywords(caption As String)
+    Debug.Print "Gathering keywords for " & caption
+    If InStr(1, caption, "Copper Tube.", vbTextCompare) Then
+        Dim copperTubeKeys As Variant
+        Dim copperTubePhrase As String
+        copperTubeKeys = Array("copper tub", "copper-", "rod size", "dielectric", "lead-free alloy", "copper alloy")
+        copperTubePhrase = "Condensate-Drain Piping:  Type DWV, drawn-temper copper tubing, wrought-copper fittings, and soldered joints or"
+        DeletePhrase (copperTubePhrase)
+        FindKeywordsInDoc (copperTubeKeys)
+        ReplaceItems ("^p^p")
+    End If
+    If InStr(1, caption, "Plastic pipe and fittings with solvent cement.", vbTextCompare) Then
+        Dim plasticPipeKeys As Variant
+        Dim plasticPipePhrase As String
+        plasticPipeKeys = Array("pvc", "solvent cement", "plastic piping", "primer", "pipe-flange", "plastic pipe and fittings", "scratching")
+        plasticPipePhrase = "or Schedule 40 PVC plastic pipe and fittings and solvent-welded joints."
+        DeletePhrase (plasticPipePhrase)
+        FindKeywordsInDoc (plasticPipeKeys)
+        ReplaceItems ("^p^p")
+    End If
+End Function
+Function DeletePhrase(phrase As String)
+    With Selection.Find
+        .text = phrase
+        .Wrap = wdFindContinue
+        .format = False
+        .MatchCase = False
+        .MatchWholeWord = False
+        .MatchWildcards = False
+        .MatchSoundsLike = False
+        .MatchAllWordForms = False
+     End With
+     Selection.Find.Execute
+     If Selection.Find.Found Then
+        Debug.Print Selection.Range
+        Selection.Range.Delete
+     End If
+End Function
+Function FindKeywordsInDoc(keywordArray As Variant)
+    For Each keyword In keywordArray
+        SelectExecute (keyword)
+    Next
+End Function
+Function ReplaceItems(item As String)
+    With Selection.Find
+        .text = item
+        .Replacement.text = "^p"
+        .Forward = True
+        .Wrap = wdFindContinue
+        .format = False
+        .MatchCase = False
+        .MatchWholeWord = False
+        .MatchWildcards = False
+        .MatchSoundsLike = False
+        .MatchAllWordForms = False
+    End With
+    Selection.Find.Execute Replace:=wdReplaceAll
+End Function
+Function SelectExecute(keyword As String)
+    Do While True
+        With Selection.Find
+            .text = keyword
+            .Wrap = wdFindContinue
+            .format = False
+            .MatchCase = False
+            .MatchWholeWord = False
+            .MatchWildcards = False
+            .MatchSoundsLike = False
+            .MatchAllWordForms = False
+         End With
+         Selection.Find.Execute
+         If Selection.Find.Found Then
+            Debug.Print Selection.Paragraphs(1).Range.text
+            Selection.Paragraphs(1).Range.Delete
+         Else
+            Exit Do
+         End If
+    Loop
+End Function
+'Function SelectDelete(paragraph As Word.paragraph, keyword As String)
+'Debug.Print Selection.Paragraphs(1).Range
+'If InStr(1, "Condensate-Drain Piping:  Type DWV, drawn-temper copper tubing, wrought-copper fittings, and soldered joints or", keyword, vbTextCompare) Or InStr(1, "or Schedule 40 PVC plastic pipe and fittings and solvent-welded joints.", keyword, vbTextCompare) Then
+'    Selection.Range.Delete
+'    Debug.Print keyword
+'    Debug.Print True
+'Else
+'    Selection.Paragraphs(1).Range.Delete
+'End If
+''    If InStr(1, "or Schedule 40 PVC plastic pipe and fittings and solvent-welded joints.", keyword, vbTextCompare) Then
+''        Selection.Range.Delete
+''    Else
+''        Selection.Paragraphs(1).Range.Delete
+''    End If
+'End Function
